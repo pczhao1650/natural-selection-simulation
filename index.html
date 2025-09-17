@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自然选择模拟 - Natural Selection Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .simulation-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .control-group label {
+            font-weight: bold;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        select {
+            padding: 8px 15px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            background: white;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        select:focus {
+            border-color: #667eea;
+        }
+
+        #gameCanvas {
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto 20px auto;
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255,255,255,0.9);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+
+        .info-panel {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .info-panel h3 {
+            color: #8B4513;
+            margin-bottom: 10px;
+        }
+
+        .info-panel p {
+            color: #654321;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            #gameCanvas {
+                width: 100%;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🐰 自然选择模拟器</h1>
+        <p>观察兔子群体在不同环境压力下的进化过程</p>
+    </div>
+
+    <div class="simulation-container">
+        <div class="controls">
+            <div class="control-group">
+                <label>环境类型</label>
+                <select id="environmentSelect">
+                    <option value="grassland">草原环境</option>
+                    <option value="snowy">雪地环境</option>
+                    <option value="desert">沙漠环境</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>捕食者</label>
+                <select id="predatorSelect">
+                    <option value="none">无捕食者</option>
+                    <option value="hawks">鹰类</option>
+                    <option value="wolves">狼群</option>
+                </select>
+            </div>
+            
+            <button id="startBtn">开始模拟</button>
+            <button id="pauseBtn" disabled>暂停</button>
+            <button id="resetBtn">重置</button>
+            <button id="addMutationBtn">添加突变</button>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #8B4513;"></div>
+                <span>棕色毛皮</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FFFFFF; border-color: #000;"></div>
+                <span>白色毛皮</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FFD700;"></div>
+                <span>金色毛皮</span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>总个体数</h3>
+                <div class="stat-value" id="totalPopulation">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>世代数</h3>
+                <div class="stat-value" id="generationCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>棕色毛皮</h3>
+                <div class="stat-value" id="brownFurCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>白色毛皮</h3>
+                <div class="stat-value" id="whiteFurCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>金色毛皮</h3>
+                <div class="stat-value" id="goldFurCount">0</div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>模拟说明</h3>
+            <p>这个模拟展示了自然选择如何影响兔子群体的特征分布。不同的环境和捕食者会对不同毛色的兔子产生选择压力，观察几代后群体特征的变化。白色毛皮在雪地环境中有优势，棕色毛皮在草原环境中更难被发现，而金色毛皮是稀有的突变特征。</p>
+        </div>
+    </div>
+
+    <script>
+        class Bunny {
+            constructor(x, y, furColor = 'brown') {
+                this.x = x;
+                this.y = y;
+                this.furColor = furColor; // 'brown', 'white', 'gold'
+                this.age = 0;
+                this.generation = 0;
+                this.energy = 100;
+                this.size = 8 + Math.random() * 4;
+                this.speed = 1 + Math.random() * 2;
+                this.direction = Math.random() * Math.PI * 2;
+                this.reproduced = false;
+                this.survivalRate = this.calculateSurvivalRate();
+            }
+
+            calculateSurvivalRate() {
+                let baseRate = 0.7;
+                const environment = document.getElementById('environmentSelect').value;
+                const predator = document.getElementById('predatorSelect').value;
+
+                // 环境适应性
+                if (environment === 'snowy' && this.furColor === 'white') {
+                    baseRate += 0.2;
+                } else if (environment === 'grassland' && this.furColor === 'brown') {
+                    baseRate += 0.15;
+                } else if (environment === 'desert' && this.furColor === 'gold') {
+                    baseRate += 0.25;
+                }
+
+                // 捕食者压力
+                if (predator === 'hawks') {
+                    if (this.furColor === 'white' && environment !== 'snowy') {
+                        baseRate -= 0.3;
+                    }
+                } else if (predator === 'wolves') {
+                    if (this.furColor === 'brown' && environment !== 'grassland') {
+                        baseRate -= 0.2;
+                    }
+                }
+
+                return Math.max(0.1, Math.min(0.95, baseRate));
+            }
+
+            update(canvas) {
+                // 移动
+                this.x += Math.cos(this.direction) * this.speed;
+                this.y += Math.sin(this.direction) * this.speed;
+
+                // 边界检测
+                if (this.x < this.size || this.x > canvas.width - this.size) {
+                    this.direction = Math.PI - this.direction;
+                }
+                if (this.y < this.size || this.y > canvas.height - this.size) {
+                    this.direction = -this.direction;
+                }
+
+                // 保持在画布内
+                this.x = Math.max(this.size, Math.min(canvas.width - this.size, this.x));
+                this.y = Math.max(this.size, Math.min(canvas.height - this.size, this.y));
+
+                // 随机改变方向
+                if (Math.random() < 0.02) {
+                    this.direction += (Math.random() - 0.5) * 0.5;
+                }
+
+                this.age++;
+                this.energy = Math.max(0, this.energy - 0.1);
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // 身体
+                ctx.fillStyle = this.getFurColorHex();
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // 耳朵
+                ctx.fillStyle = this.getFurColorHex();
+                ctx.beginPath();
+                ctx.arc(-this.size * 0.6, -this.size * 0.8, this.size * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.size * 0.6, -this.size * 0.8, this.size * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 眼睛
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(-this.size * 0.3, -this.size * 0.2, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.size * 0.3, -this.size * 0.2, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 鼻子
+                ctx.fillStyle = '#FFB6C1';
+                ctx.beginPath();
+                ctx.arc(0, this.size * 0.1, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 尾巴
+                ctx.fillStyle = this.getFurColorHex();
+                ctx.beginPath();
+                ctx.arc(this.size * 0.8, this.size * 0.2, this.size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            getFurColorHex() {
+                switch (this.furColor) {
+                    case 'brown': return '#8B4513';
+                    case 'white': return '#FFFFFF';
+                    case 'gold': return '#FFD700';
+                    default: return '#8B4513';
+                }
+            }
+
+            canReproduce() {
+                return this.age > 100 && this.energy > 50 && !this.reproduced;
+            }
+
+            reproduce(partner) {
+                if (!this.canReproduce() || !partner.canReproduce()) {
+                    return null;
+                }
+
+                // 简单的遗传逻辑
+                let childFurColor;
+                if (Math.random() < 0.01) { // 1% 突变率
+                    const colors = ['brown', 'white', 'gold'];
+                    childFurColor = colors[Math.floor(Math.random() * colors.length)];
+                } else {
+                    // 父母特征遗传
+                    childFurColor = Math.random() < 0.5 ? this.furColor : partner.furColor;
+                }
+
+                const child = new Bunny(
+                    this.x + (Math.random() - 0.5) * 50,
+                    this.y + (Math.random() - 0.5) * 50,
+                    childFurColor
+                );
+                child.generation = Math.max(this.generation, partner.generation) + 1;
+
+                this.reproduced = true;
+                partner.reproduced = true;
+                this.energy -= 30;
+                partner.energy -= 30;
+
+                return child;
+            }
+
+            shouldDie() {
+                return this.age > 1000 || this.energy <= 0 || Math.random() > this.survivalRate;
+            }
+        }
+
+        class Simulation {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.bunnies = [];
+                this.generation = 0;
+                this.isRunning = false;
+                this.frameCount = 0;
+
+                this.initializePopulation();
+                this.setupEventListeners();
+            }
+
+            initializePopulation() {
+                this.bunnies = [];
+                for (let i = 0; i < 20; i++) {
+                    const bunny = new Bunny(
+                        Math.random() * (this.canvas.width - 40) + 20,
+                        Math.random() * (this.canvas.height - 40) + 20,
+                        Math.random() < 0.7 ? 'brown' : 'white'
+                    );
+                    this.bunnies.push(bunny);
+                }
+            }
+
+            setupEventListeners() {
+                document.getElementById('startBtn').addEventListener('click', () => this.start());
+                document.getElementById('pauseBtn').addEventListener('click', () => this.pause());
+                document.getElementById('resetBtn').addEventListener('click', () => this.reset());
+                document.getElementById('addMutationBtn').addEventListener('click', () => this.addMutation());
+                
+                document.getElementById('environmentSelect').addEventListener('change', () => {
+                    this.updateSurvivalRates();
+                });
+                document.getElementById('predatorSelect').addEventListener('change', () => {
+                    this.updateSurvivalRates();
+                });
+            }
+
+            updateSurvivalRates() {
+                this.bunnies.forEach(bunny => {
+                    bunny.survivalRate = bunny.calculateSurvivalRate();
+                });
+            }
+
+            start() {
+                this.isRunning = true;
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('pauseBtn').disabled = false;
+                this.gameLoop();
+            }
+
+            pause() {
+                this.isRunning = false;
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('pauseBtn').disabled = true;
+            }
+
+            reset() {
+                this.pause();
+                this.generation = 0;
+                this.frameCount = 0;
+                this.initializePopulation();
+                this.updateStats();
+                this.draw();
+            }
+
+            addMutation() {
+                if (this.bunnies.length > 0) {
+                    const colors = ['brown', 'white', 'gold'];
+                    const randomBunny = this.bunnies[Math.floor(Math.random() * this.bunnies.length)];
+                    randomBunny.furColor = colors[Math.floor(Math.random() * colors.length)];
+                    randomBunny.survivalRate = randomBunny.calculateSurvivalRate();
+                }
+            }
+
+            gameLoop() {
+                if (!this.isRunning) return;
+
+                this.update();
+                this.draw();
+                this.frameCount++;
+
+                // 每300帧进行一次繁殖和死亡检查
+                if (this.frameCount % 300 === 0) {
+                    this.reproduction();
+                    this.naturalSelection();
+                    this.updateStats();
+                }
+
+                requestAnimationFrame(() => this.gameLoop());
+            }
+
+            update() {
+                this.bunnies.forEach(bunny => bunny.update(this.canvas));
+            }
+
+            reproduction() {
+                const newBunnies = [];
+                const reproducibleBunnies = this.bunnies.filter(bunny => bunny.canReproduce());
+
+                for (let i = 0; i < reproducibleBunnies.length; i++) {
+                    for (let j = i + 1; j < reproducibleBunnies.length; j++) {
+                        if (Math.random() < 0.3) { // 30% 繁殖概率
+                            const child = reproducibleBunnies[i].reproduce(reproducibleBunnies[j]);
+                            if (child) {
+                                newBunnies.push(child);
+                            }
+                        }
+                    }
+                }
+
+                this.bunnies.push(...newBunnies);
+                if (newBunnies.length > 0) {
+                    this.generation++;
+                }
+            }
+
+            naturalSelection() {
+                this.bunnies = this.bunnies.filter(bunny => !bunny.shouldDie());
+
+                // 如果群体太小，添加一些新个体
+                if (this.bunnies.length < 5) {
+                    for (let i = 0; i < 10; i++) {
+                        const colors = ['brown', 'white'];
+                        const bunny = new Bunny(
+                            Math.random() * (this.canvas.width - 40) + 20,
+                            Math.random() * (this.canvas.height - 40) + 20,
+                            colors[Math.floor(Math.random() * colors.length)]
+                        );
+                        this.bunnies.push(bunny);
+                    }
+                }
+
+                // 如果群体过大，进行环境限制
+                if (this.bunnies.length > 100) {
+                    this.bunnies.sort((a, b) => b.survivalRate - a.survivalRate);
+                    this.bunnies = this.bunnies.slice(0, 80);
+                }
+
+                // 重置繁殖状态
+                this.bunnies.forEach(bunny => {
+                    bunny.reproduced = false;
+                    bunny.energy = Math.min(100, bunny.energy + 20);
+                });
+            }
+
+            draw() {
+                // 清空画布
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // 绘制环境背景
+                this.drawEnvironment();
+
+                // 绘制兔子
+                this.bunnies.forEach(bunny => bunny.draw(this.ctx));
+
+                // 绘制信息
+                this.drawInfo();
+            }
+
+            drawEnvironment() {
+                const environment = document.getElementById('environmentSelect').value;
+                
+                switch (environment) {
+                    case 'snowy':
+                        this.ctx.fillStyle = 'linear-gradient(180deg, #E0F6FF 0%, #FFFFFF 100%)';
+                        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                        // 绘制雪花
+                        this.ctx.fillStyle = '#FFFFFF';
+                        for (let i = 0; i < 20; i++) {
+                            const x = Math.random() * this.canvas.width;
+                            const y = Math.random() * this.canvas.height;
+                            this.ctx.beginPath();
+                            this.ctx.arc(x, y, 2, 0, Math.PI * 2);
+                            this.ctx.fill();
+                        }
+                        break;
+                    case 'desert':
+                        this.ctx.fillStyle = '#F4A460';
+                        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                        break;
+                    default: // grassland
+                        this.ctx.fillStyle = '#98FB98';
+                        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                        // 绘制草
+                        this.ctx.fillStyle = '#228B22';
+                        for (let i = 0; i < 50; i++) {
+                            const x = Math.random() * this.canvas.width;
+                            const y = Math.random() * this.canvas.height;
+                            this.ctx.fillRect(x, y, 2, 8);
+                        }
+                        break;
+                }
+            }
+
+            drawInfo() {
+                this.ctx.fillStyle = '#333';
+                this.ctx.font = '16px Arial';
+                this.ctx.fillText(`帧数: ${this.frameCount}`, 10, 25);
+            }
+
+            updateStats() {
+                const brownCount = this.bunnies.filter(b => b.furColor === 'brown').length;
+                const whiteCount = this.bunnies.filter(b => b.furColor === 'white').length;
+                const goldCount = this.bunnies.filter(b => b.furColor === 'gold').length;
+
+                document.getElementById('totalPopulation').textContent = this.bunnies.length;
+                document.getElementById('generationCount').textContent = this.generation;
+                document.getElementById('brownFurCount').textContent = brownCount;
+                document.getElementById('whiteFurCount').textContent = whiteCount;
+                document.getElementById('goldFurCount').textContent = goldCount;
+            }
+        }
+
+        // 初始化模拟
+        const simulation = new Simulation();
+        simulation.updateStats();
+        simulation.draw();
+    </script>
+</body>
+</html>
